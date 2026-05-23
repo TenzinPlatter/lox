@@ -4,19 +4,24 @@ use std::{
     path::Path,
 };
 
-use crate::token::{Token, TokenParser};
+use tracing::info;
 
+use crate::{expr::Expr, parser::TokenParser, token::TokenScanner};
+
+mod ast_pretty_print;
+mod expr;
+mod parser;
 mod token;
 
 pub fn run_file(source: &Path) -> anyhow::Result<()> {
     let contents = read_to_string(source)?;
-    let mut parser = TokenParser::default();
-    run(&mut parser, &contents)
+    let mut scanner = TokenScanner::default();
+    run(&mut scanner, &contents)
 }
 
 pub fn run_prompt() -> anyhow::Result<()> {
     let mut reader = BufReader::new(stdin());
-    let mut parser = TokenParser::default();
+    let mut scanner = TokenScanner::default();
     loop {
         print!("> ");
         stdout().flush()?;
@@ -26,7 +31,7 @@ pub fn run_prompt() -> anyhow::Result<()> {
             break;
         }
 
-        if let Err(e) = run(&mut parser, &line) {
+        if let Err(e) = run(&mut scanner, &line) {
             eprintln!("{}", e);
         }
     }
@@ -34,11 +39,17 @@ pub fn run_prompt() -> anyhow::Result<()> {
     Ok(())
 }
 
-pub fn run(parser: &mut TokenParser, source: &str) -> anyhow::Result<()> {
-    let tokens = parser.parse_tokens(source)?;
-    for token in tokens {
-        println!("{:?}", token);
+pub fn run(scanner: &mut TokenScanner, source: &str) -> anyhow::Result<()> {
+    let tokens = scanner.scan_tokens(source)?;
+    for token in &tokens {
+        info!("{:?}", token);
     }
 
+    let mut parser = TokenParser::new(tokens.iter());
+    if let Some(expr) = parser.parse() {
+        info!("{}", expr.pretty_print_ast()?)
+    } else {
+        info!("Invalid Syntax");
+    }
     Ok(())
 }

@@ -2,7 +2,19 @@ use std::{iter::Peekable, str::Chars, vec};
 
 use anyhow::bail;
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub struct Token {
+    pub token_type: TokenType,
+    pub lexeme: String,
+    pub line: u64,
+}
+
+#[derive(Default)]
+pub struct TokenScanner {
+    block_comment_level: u8,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum TokenType {
     /// One char tokens
     LParen,
@@ -79,13 +91,6 @@ impl TokenType {
     }
 }
 
-#[derive(Debug)]
-pub struct Token {
-    token_type: TokenType,
-    lexeme: String,
-    line: u64,
-}
-
 impl Token {
     pub fn new(token_type: TokenType, lexeme: String, line: u64) -> Token {
         Token {
@@ -96,13 +101,8 @@ impl Token {
     }
 }
 
-#[derive(Default)]
-pub struct TokenParser {
-    block_comment_level: u8,
-}
-
-impl TokenParser {
-    pub fn parse_tokens(&mut self, source: &str) -> anyhow::Result<Vec<Token>> {
+impl TokenScanner {
+    pub fn scan_tokens(&mut self, source: &str) -> anyhow::Result<Vec<Token>> {
         let mut tokens = Vec::new();
         let mut line: u64 = 0;
         let mut had_error = false;
@@ -273,7 +273,7 @@ fn parse_identifier(
 
     let identifier: String = identifier.iter().collect();
     let token_type =
-        TokenType::from_keyword(&identifier).unwrap_or(TokenType::Identifier(identifier.clone()));
+        TokenType::from_keyword(&identifier).unwrap_or_else(|| TokenType::Identifier(identifier.clone()));
 
     Ok(Token::new(token_type, identifier, line))
 }
