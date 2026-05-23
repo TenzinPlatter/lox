@@ -96,134 +96,163 @@ impl Token {
     }
 }
 
-pub fn parse_tokens(source: &str) -> anyhow::Result<Vec<Token>> {
-    let mut tokens = Vec::new();
-    let mut line: u64 = 0;
-    let mut had_error = false;
+#[derive(Default)]
+pub struct TokenParser {
+    block_comment_level: u8,
+}
 
-    let mut chars = source.chars().peekable();
-    while let Some(c) = chars.next() {
-        match c {
-            ' ' | '\r' | '\t' => (),
-            '\n' => line += 1,
-            '(' => tokens.push(Token::new(TokenType::RParen, "(".into(), line)),
-            ')' => tokens.push(Token::new(TokenType::LParen, ")".into(), line)),
-            '{' => tokens.push(Token::new(TokenType::RBrace, "{".into(), line)),
-            '}' => tokens.push(Token::new(TokenType::LBrace, "}".into(), line)),
-            ',' => tokens.push(Token::new(TokenType::Comma, ",".into(), line)),
-            '.' => tokens.push(Token::new(TokenType::Dot, ".".into(), line)),
-            '-' => tokens.push(Token::new(TokenType::Minus, "-".into(), line)),
-            '+' => tokens.push(Token::new(TokenType::Plus, "+".into(), line)),
-            ';' => tokens.push(Token::new(TokenType::Semicolon, ";".into(), line)),
-            '*' => tokens.push(Token::new(TokenType::Star, "*".into(), line)),
-            '!' => {
-                let (token_type, lexeme) = if let Some(next) = chars.peek()
-                    && *next == '='
-                {
-                    chars.next();
-                    (TokenType::BangEqual, "!=".to_string())
-                } else {
-                    (TokenType::Bang, "!".to_string())
-                };
-                tokens.push(Token::new(token_type, lexeme, line));
-            }
-            '=' => {
-                let (token_type, lexeme) = if let Some(next) = chars.peek()
-                    && *next == '='
-                {
-                    chars.next();
-                    (TokenType::EqualEqual, "==".to_string())
-                } else {
-                    (TokenType::Equal, "=".to_string())
-                };
-                tokens.push(Token::new(token_type, lexeme, line));
-            }
-            '<' => {
-                let (token_type, lexeme) = if let Some(next) = chars.peek()
-                    && *next == '='
-                {
-                    chars.next();
-                    (TokenType::LessEqual, "<=".to_string())
-                } else {
-                    (TokenType::Less, "<".to_string())
-                };
-                tokens.push(Token::new(token_type, lexeme, line));
-            }
-            '>' => {
-                let (token_type, lexeme) = if let Some(next) = chars.peek()
-                    && *next == '='
-                {
-                    chars.next();
-                    (TokenType::GreaterEqual, ">=".to_string())
-                } else {
-                    (TokenType::Greater, ">".to_string())
-                };
-                tokens.push(Token::new(token_type, lexeme, line));
-            }
-            '/' => {
-                if let Some(next) = chars.peek()
-                    && *next == '/'
-                {
-                    // We are in a comment, skip the rest of the line
-                    while let Some(c) = chars.next()
-                        && c != '\n'
-                    {}
-                } else {
+impl TokenParser {
+    pub fn parse_tokens(&mut self, source: &str) -> anyhow::Result<Vec<Token>> {
+        let mut tokens = Vec::new();
+        let mut line: u64 = 0;
+        let mut had_error = false;
+
+        let mut chars = source.chars().peekable();
+        while let Some(c) = chars.next() {
+            match c {
+                // we do this check first so we can exit block comments
+                '*' => {
+                    if let Some(next) = chars.peek()
+                        && *next == '/'
+                    {
+                        if self.block_comment_level == 0 {
+                            tracing::error!("Got closing block comment without opening '/*'");
+                            had_error = true;
+                        }
+                        self.block_comment_level -= 1;
+                        let _ = chars.next();
+                        continue;
+                    }
+                    tokens.push(Token::new(TokenType::Star, "*".into(), line))
+                }
+                // this check will skip any char while we are in a block comment
+                _ if self.block_comment_level > 0 => (),
+
+                ' ' | '\r' | '\t' => (),
+                '\n' => line += 1,
+                '(' => tokens.push(Token::new(TokenType::RParen, "(".into(), line)),
+                ')' => tokens.push(Token::new(TokenType::LParen, ")".into(), line)),
+                '{' => tokens.push(Token::new(TokenType::RBrace, "{".into(), line)),
+                '}' => tokens.push(Token::new(TokenType::LBrace, "}".into(), line)),
+                ',' => tokens.push(Token::new(TokenType::Comma, ",".into(), line)),
+                '.' => tokens.push(Token::new(TokenType::Dot, ".".into(), line)),
+                '-' => tokens.push(Token::new(TokenType::Minus, "-".into(), line)),
+                '+' => tokens.push(Token::new(TokenType::Plus, "+".into(), line)),
+                ';' => tokens.push(Token::new(TokenType::Semicolon, ";".into(), line)),
+                '!' => {
+                    let (token_type, lexeme) = if let Some(next) = chars.peek()
+                        && *next == '='
+                    {
+                        chars.next();
+                        (TokenType::BangEqual, "!=".to_string())
+                    } else {
+                        (TokenType::Bang, "!".to_string())
+                    };
+                    tokens.push(Token::new(token_type, lexeme, line));
+                }
+                '=' => {
+                    let (token_type, lexeme) = if let Some(next) = chars.peek()
+                        && *next == '='
+                    {
+                        chars.next();
+                        (TokenType::EqualEqual, "==".to_string())
+                    } else {
+                        (TokenType::Equal, "=".to_string())
+                    };
+                    tokens.push(Token::new(token_type, lexeme, line));
+                }
+                '<' => {
+                    let (token_type, lexeme) = if let Some(next) = chars.peek()
+                        && *next == '='
+                    {
+                        chars.next();
+                        (TokenType::LessEqual, "<=".to_string())
+                    } else {
+                        (TokenType::Less, "<".to_string())
+                    };
+                    tokens.push(Token::new(token_type, lexeme, line));
+                }
+                '>' => {
+                    let (token_type, lexeme) = if let Some(next) = chars.peek()
+                        && *next == '='
+                    {
+                        chars.next();
+                        (TokenType::GreaterEqual, ">=".to_string())
+                    } else {
+                        (TokenType::Greater, ">".to_string())
+                    };
+                    tokens.push(Token::new(token_type, lexeme, line));
+                }
+                '/' => {
+                    if let Some(next) = chars.peek() {
+                        if *next == '/' {
+                            // inline comment, we need to skip the rest of the line
+                            while let Some(c) = chars.next()
+                                && c != '\n'
+                            {}
+                            continue;
+                        } else if *next == '*' {
+                            // block comment
+                            self.block_comment_level += 1;
+                            let _ = chars.next();
+                            continue;
+                        }
+                    }
                     tokens.push(Token::new(TokenType::Slash, "/".into(), line));
                 }
-            }
-            '"' => {
-                let mut str_chars: Vec<char> = Vec::new();
-                let mut terminated = false;
-                for c in chars.by_ref() {
-                    if c == '"' {
-                        terminated = true;
+                '"' => {
+                    let mut str_chars: Vec<char> = Vec::new();
+                    let mut terminated = false;
+                    for c in chars.by_ref() {
+                        if c == '"' {
+                            terminated = true;
+                            break;
+                        }
+                        if c == '\n' {
+                            line += 1;
+                        }
+                        str_chars.push(c);
+                    }
+
+                    if !terminated {
+                        tracing::error!("Unterminated string");
+                        had_error = true;
                         break;
                     }
-                    if c == '\n' {
-                        line += 1;
+
+                    let string_value: String = str_chars.iter().collect();
+                    tokens.push(Token::new(
+                        TokenType::String(string_value.clone()),
+                        format!("\"{}\"", string_value),
+                        line,
+                    ));
+                }
+                _ if c.is_ascii_digit() => match parse_digit(&mut chars, c, line) {
+                    Ok(token) => tokens.push(token),
+                    Err(e) => {
+                        tracing::error!("{}", e);
+                        had_error = true;
                     }
-                    str_chars.push(c);
-                }
-
-                if !terminated {
-                    tracing::error!("Unterminated string");
-                    had_error = true;
-                    break;
-                }
-
-                let string_value: String = str_chars.iter().collect();
-                tokens.push(Token::new(
-                    TokenType::String(string_value.clone()),
-                    format!("\"{}\"", string_value),
-                    line,
-                ));
-            }
-            _ if c.is_ascii_digit() => match parse_digit(&mut chars, c, line) {
-                Ok(token) => tokens.push(token),
-                Err(e) => {
-                    tracing::error!("{}", e);
+                },
+                _ if c.is_ascii_alphabetic() => match parse_identifier(&mut chars, c, line) {
+                    Ok(token) => tokens.push(token),
+                    Err(e) => {
+                        tracing::error!("{}", e);
+                        had_error = true;
+                    }
+                },
+                _ => {
+                    tracing::error!("Unexpected character '{}' on line {}", c, line);
                     had_error = true;
                 }
-            },
-            _ if c.is_ascii_alphabetic() => match parse_identifier(&mut chars, c, line) {
-                Ok(token) => tokens.push(token),
-                Err(e) => {
-                    tracing::error!("{}", e);
-                    had_error = true;
-                }
-            },
-            _ => {
-                tracing::error!("Unexpected character '{}' on line {}", c, line);
-                had_error = true;
             }
         }
-    }
 
-    if had_error {
-        bail!("Invalid syntax")
+        if had_error {
+            bail!("Invalid syntax")
+        }
+        Ok(tokens)
     }
-    Ok(tokens)
 }
 
 fn parse_identifier(
