@@ -12,31 +12,32 @@ impl Expr {
         };
 
         Ok(match self {
+            Expr::Ternary {
+                condition,
+                left,
+                right,
+            } => parenthize("?:".to_string(), &[condition, left, right])?,
             Expr::Binary {
                 left,
                 right,
                 operator,
-            } => {
-                parenthize(operator.lexeme.clone(), &[left, right])?
-            }
-            Expr::Grouping { expression } => {
-                parenthize("group".to_string(), &[expression])?
-            }
+            } => parenthize(operator.lexeme.clone(), &[left, right])?,
+            Expr::Grouping { expression } => parenthize("group".to_string(), &[expression])?,
             Expr::Literal { value } => match value {
                 Some(object) => {
                     // TODO: ig this will need dynamic dispatch to work for any type/user defined
                     // types and classes?
                     if let Some(object) = object.downcast_ref::<f64>() {
                         object.to_string()
+                    } else if let Some(object) = object.downcast_ref::<String>() {
+                        format!("\"{}\"", object)
                     } else {
                         "object".to_string()
                     }
                 }
                 None => "nil".to_string(),
             },
-            Expr::Unary { operator, right } => {
-                parenthize(operator.lexeme.to_string(), &[right])?
-            }
+            Expr::Unary { operator, right } => parenthize(operator.lexeme.to_string(), &[right])?,
         })
     }
 }

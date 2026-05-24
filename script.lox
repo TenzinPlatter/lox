@@ -1,10 +1,1 @@
-/*
-this is a block comment
-*/
-var hi = 123;
-var multi_line_string = "woah
-this
-thing
-is
-so
-long";
+"out" ? "in" ? "in res" : "in res 2" : "out res"

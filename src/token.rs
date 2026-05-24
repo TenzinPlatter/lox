@@ -38,6 +38,8 @@ pub enum TokenType {
     GreaterEqual,
     Less,
     LessEqual,
+    QuestionMark,
+    Colon,
 
     /// Literals
     Identifier(String),
@@ -130,15 +132,17 @@ impl TokenScanner {
 
                 ' ' | '\r' | '\t' => (),
                 '\n' => line += 1,
-                '(' => tokens.push(Token::new(TokenType::RParen, "(".into(), line)),
-                ')' => tokens.push(Token::new(TokenType::LParen, ")".into(), line)),
-                '{' => tokens.push(Token::new(TokenType::RBrace, "{".into(), line)),
-                '}' => tokens.push(Token::new(TokenType::LBrace, "}".into(), line)),
+                '(' => tokens.push(Token::new(TokenType::LParen, "(".into(), line)),
+                ')' => tokens.push(Token::new(TokenType::RParen, ")".into(), line)),
+                '{' => tokens.push(Token::new(TokenType::LBrace, "{".into(), line)),
+                '}' => tokens.push(Token::new(TokenType::RBrace, "}".into(), line)),
                 ',' => tokens.push(Token::new(TokenType::Comma, ",".into(), line)),
                 '.' => tokens.push(Token::new(TokenType::Dot, ".".into(), line)),
                 '-' => tokens.push(Token::new(TokenType::Minus, "-".into(), line)),
                 '+' => tokens.push(Token::new(TokenType::Plus, "+".into(), line)),
                 ';' => tokens.push(Token::new(TokenType::Semicolon, ";".into(), line)),
+                '?' => tokens.push(Token::new(TokenType::QuestionMark, "?".into(), line)),
+                ':' => tokens.push(Token::new(TokenType::Colon, ":".into(), line)),
                 '!' => {
                     let (token_type, lexeme) = if let Some(next) = chars.peek()
                         && *next == '='

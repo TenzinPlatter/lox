@@ -1,7 +1,13 @@
 use crate::token::Token;
 use std::any::Any;
 
+#[derive(Debug)]
 pub enum Expr {
+    Ternary {
+        condition: Box<Expr>,
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
     Binary {
         left: Box<Expr>,
         right: Box<Expr>,

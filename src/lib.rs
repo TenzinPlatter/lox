@@ -45,7 +45,7 @@ pub fn run(scanner: &mut TokenScanner, source: &str) -> anyhow::Result<()> {
         info!("{:?}", token);
     }
 
-    let mut parser = TokenParser::new(tokens.iter());
+    let mut parser = TokenParser::new(tokens.iter().peekable());
     if let Some(expr) = parser.parse() {
         info!("{}", expr.pretty_print_ast()?)
     } else {
