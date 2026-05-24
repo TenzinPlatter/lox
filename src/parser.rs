@@ -18,6 +18,7 @@ impl<'a> TokenParser<'a> {
     }
 
     pub fn parse(&mut self) -> Option<Expr> {
+        // TODO: properly handle multi expression token lists
         match self.expression() {
             Ok(expr) => Some(expr),
             Err(e) => {
@@ -161,6 +162,30 @@ impl<'a> TokenParser<'a> {
                     Ok(Expr::Grouping {
                         expression: Box::new(expr),
                     })
+                }
+                TokenType::Slash
+                | TokenType::Star
+                | TokenType::Semicolon
+                | TokenType::Plus
+                | TokenType::Minus
+                | TokenType::Comma
+                | TokenType::Bang
+                | TokenType::BangEqual
+                | TokenType::Equal
+                | TokenType::EqualEqual
+                | TokenType::Greater
+                | TokenType::GreaterEqual
+                | TokenType::Less
+                | TokenType::LessEqual
+                | TokenType::QuestionMark
+                | TokenType::Colon => {
+                    let _right = self.expression();
+                    tracing::error!(
+                        "Got unexpected operator token: {:?} on line {}",
+                        tok.token_type,
+                        tok.line
+                    );
+                    Ok(Expr::Literal { value: None })
                 }
                 _ => bail!("Expected expression on line {}", tok.line),
             }
