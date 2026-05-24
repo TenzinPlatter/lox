@@ -29,7 +29,23 @@ impl<'a> TokenParser<'a> {
     }
 
     fn expression(&mut self) -> anyhow::Result<Expr> {
-        self.equality()
+        // we know we can just grab this as equality === expression for this purpose
+        let mut expr = self.equality()?;
+        while self
+            .tokens
+            .peek()
+            .is_some_and(|tok| matches!(tok.token_type, TokenType::Comma))
+        {
+            let comma = self.tokens.next().expect("Just peeked at this");
+            let right = self.equality()?;
+            expr = Expr::Binary {
+                left: Box::new(expr),
+                right: Box::new(right),
+                operator: comma.clone(),
+            };
+        }
+
+        Ok(expr)
     }
 
     fn equality(&mut self) -> anyhow::Result<Expr> {

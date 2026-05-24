@@ -6,7 +6,7 @@ use std::{
 
 use tracing::info;
 
-use crate::{expr::Expr, parser::TokenParser, token::TokenScanner};
+use crate::{parser::TokenParser, token::TokenScanner};
 
 mod ast_pretty_print;
 mod expr;
