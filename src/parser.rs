@@ -1,9 +1,9 @@
-use std::{boxed, iter::Peekable, slice::Iter};
+use std::{iter::Peekable, slice::Iter};
 
-use anyhow::{Context, bail};
+use anyhow::bail;
 
 use crate::{
-    expr::Expr,
+    expr::{Expr, Object},
     token::{Token, TokenType},
 };
 
@@ -137,17 +137,17 @@ impl<'a> TokenParser<'a> {
             tracing::debug!("token type: {:?}", tok.token_type);
             match &tok.token_type {
                 TokenType::False => Ok(Expr::Literal {
-                    value: Some(Box::new(false)),
+                    value: Object::Boolean(false),
                 }),
                 TokenType::True => Ok(Expr::Literal {
-                    value: Some(Box::new(true)),
+                    value: Object::Boolean(true),
                 }),
-                TokenType::Nil => Ok(Expr::Literal { value: None }),
+                TokenType::Nil => Ok(Expr::Literal { value: Object::Nil }),
                 TokenType::String(value) => Ok(Expr::Literal {
-                    value: Some(Box::new(value.clone())),
+                    value: Object::String(value.to_string()),
                 }),
                 TokenType::Number(value) => Ok(Expr::Literal {
-                    value: Some(Box::new(*value)),
+                    value: Object::Number(*value),
                 }),
                 TokenType::LParen => {
                     let line = tok.line;
@@ -185,7 +185,7 @@ impl<'a> TokenParser<'a> {
                         tok.token_type,
                         tok.line
                     );
-                    Ok(Expr::Literal { value: None })
+                    Ok(Expr::Literal { value: Object::Nil })
                 }
                 _ => bail!("Expected expression on line {}", tok.line),
             }

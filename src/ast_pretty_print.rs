@@ -1,4 +1,4 @@
-use crate::expr::Expr;
+use crate::expr::{Expr, Object};
 
 impl Expr {
     pub fn pretty_print_ast(&self) -> anyhow::Result<String> {
@@ -23,20 +23,7 @@ impl Expr {
                 operator,
             } => parenthize(operator.lexeme.clone(), &[left, right])?,
             Expr::Grouping { expression } => parenthize("group".to_string(), &[expression])?,
-            Expr::Literal { value } => match value {
-                Some(object) => {
-                    // TODO: ig this will need dynamic dispatch to work for any type/user defined
-                    // types and classes?
-                    if let Some(object) = object.downcast_ref::<f64>() {
-                        object.to_string()
-                    } else if let Some(object) = object.downcast_ref::<String>() {
-                        format!("\"{}\"", object)
-                    } else {
-                        "object".to_string()
-                    }
-                }
-                None => "nil".to_string(),
-            },
+            Expr::Literal { value } => value.to_string(),
             Expr::Unary { operator, right } => parenthize(operator.lexeme.to_string(), &[right])?,
         })
     }

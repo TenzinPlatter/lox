@@ -6,7 +6,7 @@ use std::{
 
 use tracing::info;
 
-use crate::{parser::TokenParser, token::TokenScanner};
+use crate::{expr::evaluate, parser::TokenParser, token::TokenScanner};
 
 mod ast_pretty_print;
 mod expr;
@@ -47,7 +47,8 @@ pub fn run(scanner: &mut TokenScanner, source: &str) -> anyhow::Result<()> {
 
     let mut parser = TokenParser::new(tokens.iter().peekable());
     if let Some(expr) = parser.parse() {
-        info!("{}", expr.pretty_print_ast()?)
+        info!("{}", expr.pretty_print_ast()?);
+        println!("{:?}", evaluate(expr)?);
     } else {
         info!("Invalid Syntax");
     }
