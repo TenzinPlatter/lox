@@ -4,6 +4,7 @@ use anyhow::bail;
 
 use crate::{
     expr::{Expr, Object},
+    stmt::Stmt,
     token::{Token, TokenType},
 };
 
@@ -17,15 +18,57 @@ impl<'a> TokenParser<'a> {
         TokenParser { tokens }
     }
 
-    pub fn parse(&mut self) -> Option<Expr> {
-        // TODO: properly handle multi expression token lists
-        match self.expression() {
-            Ok(expr) => Some(expr),
-            Err(e) => {
-                tracing::error!("Syntax error: {}", e);
-                None
+    pub fn parse(&mut self) -> Vec<Stmt> {
+        let mut stmts = Vec::new();
+        while self
+            .tokens
+            .peek()
+            .is_some_and(|tok| !matches!(tok.token_type, TokenType::Eof))
+        {
+            match self.statement() {
+                Ok(stmt) => stmts.push(stmt),
+                Err(e) => {
+                    tracing::error!("Syntax error: {}", e);
+                }
             }
         }
+
+        stmts
+    }
+
+    fn statement(&mut self) -> anyhow::Result<Stmt> {
+        if self
+            .tokens
+            .peek()
+            .is_some_and(|tok| matches!(tok.token_type, TokenType::Print))
+        {
+            self.print_statment()
+        } else {
+            self.expr_statement()
+        }
+    }
+
+    fn expr_statement(&mut self) -> anyhow::Result<Stmt> {
+        Ok(Stmt::Expression(self.expression()?))
+    }
+
+    // TODO: move this to a stdlib function
+    fn print_statment(&mut self) -> anyhow::Result<Stmt> {
+        let print_tok = self.tokens.next();
+        if !print_tok.is_some_and(|tok| matches!(tok.token_type, TokenType::Print)) {
+            panic!("Called print_statment() without next token being a print token");
+        }
+        let print_tok = print_tok.unwrap();
+
+        let expr = self.expression()?;
+        self.expect(
+            &[TokenType::Semicolon],
+            &format!(
+                "Statement without trailing semicolon on line {}",
+                print_tok.line
+            ),
+        )?;
+        Ok(Stmt::Print(expr))
     }
 
     #[tracing::instrument(level = "debug", skip_all)]
@@ -249,5 +292,17 @@ impl<'a> TokenParser<'a> {
         }
 
         Ok(expr)
+    }
+
+    fn expect(&mut self, expected_token_types: &[TokenType], message: &str) -> anyhow::Result<()> {
+        if !self
+            .tokens
+            .next()
+            .is_some_and(|tok| expected_token_types.contains(&tok.token_type))
+        {
+            bail!("{}", message);
+        } else {
+            Ok(())
+        }
     }
 }

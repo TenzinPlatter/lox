@@ -6,11 +6,12 @@ use std::{
 
 use tracing::info;
 
-use crate::{expr::evaluate, parser::TokenParser, token::TokenScanner};
+use crate::{expr::evaluate, parser::TokenParser, stmt::Stmt, token::TokenScanner};
 
 mod ast_pretty_print;
 mod expr;
 mod parser;
+mod stmt;
 mod token;
 
 pub fn run_file(source: &Path) -> anyhow::Result<()> {
@@ -32,7 +33,7 @@ pub fn run_prompt() -> anyhow::Result<()> {
         }
 
         if let Err(e) = run(&mut scanner, &line) {
-            eprintln!("{}", e);
+            tracing::error!("{}", e);
         }
     }
 
@@ -46,11 +47,14 @@ pub fn run(scanner: &mut TokenScanner, source: &str) -> anyhow::Result<()> {
     }
 
     let mut parser = TokenParser::new(tokens.iter().peekable());
-    if let Some(expr) = parser.parse() {
-        info!("{}", expr.pretty_print_ast()?);
-        println!("{:?}", evaluate(expr)?);
-    } else {
-        info!("Invalid Syntax");
+    let stmts = parser.parse();
+    for stmt in stmts {
+        match stmt {
+            Stmt::Expression(expr) | Stmt::Print(expr) => {
+                info!("{}", expr.pretty_print_ast()?);
+                println!("{:?}", evaluate(expr)?);
+            }
+        }
     }
     Ok(())
 }

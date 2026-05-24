@@ -1,7 +1,7 @@
 use anyhow::bail;
 
 use crate::token::{Token, TokenType};
-use std::{any::Any, fmt::Display};
+use std::fmt::Display;
 
 #[derive(Debug, Clone)]
 pub enum Expr {

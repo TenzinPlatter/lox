@@ -255,6 +255,13 @@ impl TokenScanner {
         if had_error {
             bail!("Invalid syntax")
         }
+        let last_line = if let Some(last) = tokens.last() {
+            last.line
+        } else {
+            0
+        };
+
+        tokens.push(Token::new(TokenType::Eof, "EOF".to_string(), last_line));
         Ok(tokens)
     }
 }
@@ -276,8 +283,8 @@ fn parse_identifier(
     }
 
     let identifier: String = identifier.iter().collect();
-    let token_type =
-        TokenType::from_keyword(&identifier).unwrap_or_else(|| TokenType::Identifier(identifier.clone()));
+    let token_type = TokenType::from_keyword(&identifier)
+        .unwrap_or_else(|| TokenType::Identifier(identifier.clone()));
 
     Ok(Token::new(token_type, identifier, line))
 }
